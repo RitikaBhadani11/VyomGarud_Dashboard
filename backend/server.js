@@ -7,17 +7,14 @@ const dgram = require('dgram');
 const app = express();
 const PORT = process.env.PORT || 3001; // Render provides PORT
 
-app.use(cors({
-  origin: [
-    'https://mavlink-frontend.onrender.com',
-    'http://localhost:3000'
-  ],
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ 
+  server,
+  path: '/ws'
+});
 
 const clients = new Set();
 let telemetryData = {
@@ -212,30 +209,42 @@ function startMAVLinkListener() {
     });
 }
 
-wss.on('connection', (ws) => {
-    console.log('✅ GCS Dashboard connected');
+wss.on('connection', (ws, req) => {
+    console.log('✅ New WebSocket connection from:', req.headers.origin);
     clients.add(ws);
     
+    // Send initial data
     ws.send(JSON.stringify({
         type: 'INITIAL_DATA',
         data: mavlinkParser.telemetryData
     }));
 
     ws.on('close', () => {
-        console.log('❌ GCS Dashboard disconnected');
+        console.log('❌ WebSocket disconnected');
         clients.delete(ws);
+    });
+
+    ws.on('error', (error) => {
+        console.error('❌ WebSocket error:', error);
     });
 });
 
+// API routes
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Backend Ready' });
+    res.json({ 
+        status: 'OK', 
+        message: 'Backend Ready',
+        websocket: 'Active',
+        connectedClients: clients.size
+    });
 });
 
 app.get('/api/telemetry', (req, res) => {
     res.json(mavlinkParser.telemetryData);
 });
 
-server.listen(PORT, '0.0.0.0', () => { // Listen on 0.0.0.0
-    console.log(`🚀 Backend running on http://0.0.0.0:${PORT}`);
-    startMAVLinkListener();
+// Start server - Railway handles the port
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Backend running on port ${PORT}`);
+    console.log(`📡 WebSocket available at ws://0.0.0.0:${PORT}/ws`);
 });
