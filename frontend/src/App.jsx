@@ -39,12 +39,13 @@ function App() {
       }
     };
   }, []);
-
 const connectWebSocket = () => {
   try {
     setConnectionStatus('connecting');
     
-    const wsUrl = 'wss://vyomgarud-dashboard-backend.onrender.com';
+    // Use the same domain as your backend
+    const backendUrl = window.location.origin.replace('https://', 'wss://').replace('http://', 'ws://');
+    const wsUrl = `${backendUrl}/ws`;
     
     console.log('🔗 Connecting to:', wsUrl);
     ws.current = new WebSocket(wsUrl);
@@ -54,29 +55,33 @@ const connectWebSocket = () => {
       console.log('✅ WebSocket connected to backend');
     };
 
-    // ... keep the rest of your WebSocket code the same ...
+    ws.current.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        setTelemetry(prev => ({
+          ...prev,
+          ...message.data
+        }));
+      } catch (error) {
+        console.error('❌ Error parsing WebSocket message:', error);
+      }
+    };
+
+    ws.current.onclose = () => {
+      setConnectionStatus('disconnected');
+      console.log('🔌 WebSocket disconnected');
+    };
+
+    ws.current.onerror = (error) => {
+      console.error('❌ WebSocket error:', error);
+      setConnectionStatus('error');
+    };
+    
   } catch (error) {
     console.error('❌ Failed to create WebSocket:', error);
     setConnectionStatus('error');
   }
 };
-
-  const disconnectWebSocket = () => {
-    if (ws.current) {
-      ws.current.close();
-      ws.current = null;
-    }
-    setConnectionStatus('disconnected');
-    console.log('🔌 Manual disconnect');
-  };
-
-  const toggleConnection = () => {
-    if (connectionStatus === 'connected') {
-      disconnectWebSocket();
-    } else {
-      connectWebSocket();
-    }
-  };
 
 const testBackend = async () => {
   const apiUrl = 'https://vyomgarud-dashboard-backend.onrender.com';
