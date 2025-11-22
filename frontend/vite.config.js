@@ -9,14 +9,10 @@ export default defineConfig({
       '/api': {
         target: process.env.VITE_BACKEND_URL || 'http://localhost:3001',
         changeOrigin: true
-      },
-      '/ws': {
-        target: process.env.VITE_BACKEND_URL || 'ws://localhost:3001',
-        ws: true
       }
     }
   },
   define: {
-    'process.env.VITE_BACKEND_URL': JSON.stringify(process.env.VITE_BACKEND_URL)
+    'process.env': {}
   }
 })

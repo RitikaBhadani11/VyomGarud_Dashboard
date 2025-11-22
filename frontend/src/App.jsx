@@ -47,7 +47,7 @@ function App() {
       setConnectionStatus('connecting');
           const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
         const wsUrl = backendUrl.replace('http', 'ws') + (backendUrl.includes('render.com') ? '' : ':3001');
-      ws.current = new WebSocket('ws://localhost:3001');
+      ws.current = new WebSocket('wsUrl');
       
       
       ws.current.onopen = () => {
@@ -106,9 +106,11 @@ function App() {
     }
   };
 
-  const testBackend = async () => {
+const testBackend = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/health');
+      // FIXED: Use environment variable for backend URL
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const response = await fetch(`${backendUrl}/api/health`);
       const data = await response.json();
       alert(`Backend Status: ${data.status}\n${data.message}`);
     } catch (error) {
