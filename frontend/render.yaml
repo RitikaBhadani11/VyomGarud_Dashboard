@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: mavlink-frontend
+    env: static
+    buildCommand: npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        value: https://mavlink-backend.onrender.com

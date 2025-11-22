@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Logo Component using your image
+// Logo Component - Replace with your actual logo
 const VyomGarudLogo = () => (
   <motion.div
+  
     initial={{ scale: 0 }}
     animate={{ scale: 1 }}
     transition={{ duration: 0.5 }}
@@ -16,6 +17,7 @@ const VyomGarudLogo = () => (
       whileHover={{ scale: 1.1, rotate: 5 }}
       transition={{ type: "spring", stiffness: 300 }}
     />
+    
     <div>
       <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
         VYOM GARUD
@@ -39,61 +41,80 @@ function App() {
       }
     };
   }, []);
-const connectWebSocket = () => {
-  try {
-    setConnectionStatus('connecting');
-    
-    // Use the same domain as your backend
-    const backendUrl = window.location.origin.replace('https://', 'wss://').replace('http://', 'ws://');
-    const wsUrl = `${backendUrl}/ws`;
-    
-    console.log('🔗 Connecting to:', wsUrl);
-    ws.current = new WebSocket(wsUrl);
-    
-    ws.current.onopen = () => {
-      setConnectionStatus('connected');
-      console.log('✅ WebSocket connected to backend');
-    };
 
-    ws.current.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        setTelemetry(prev => ({
-          ...prev,
-          ...message.data
-        }));
-      } catch (error) {
-        console.error('❌ Error parsing WebSocket message:', error);
-      }
-    };
+  const connectWebSocket = () => {
+    try {
+      setConnectionStatus('connecting');
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        const wsUrl = backendUrl.replace('http', 'ws') + (backendUrl.includes('render.com') ? '' : ':3001');
+      ws.current = new WebSocket('ws://localhost:3001');
+      
+      
+      ws.current.onopen = () => {
+        setConnectionStatus('connected');
+        console.log('✅ WebSocket connected to backend');
+      };
 
-    ws.current.onclose = () => {
-      setConnectionStatus('disconnected');
-      console.log('🔌 WebSocket disconnected');
-    };
+      ws.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('📨 Received:', data.type, data.data);
+          
+          if (data.type === 'INITIAL_DATA') {
+            setTelemetry(data.data);
+          } else {
+            setTelemetry(prev => ({
+              ...prev,
+              [data.type.toLowerCase()]: data.data
+            }));
+          }
+        } catch (error) {
+          console.error('❌ Error parsing message:', error);
+        }
+      };
 
-    ws.current.onerror = (error) => {
-      console.error('❌ WebSocket error:', error);
+      ws.current.onclose = (event) => {
+        setConnectionStatus('disconnected');
+        console.log('❌ WebSocket disconnected', event.code, event.reason);
+        // No automatic reconnection - manual control only
+      };
+
+      ws.current.onerror = (error) => {
+        console.error('❌ WebSocket error:', error);
+        setConnectionStatus('error');
+      };
+    } catch (error) {
+      console.error('❌ Failed to create WebSocket:', error);
       setConnectionStatus('error');
-    };
-    
-  } catch (error) {
-    console.error('❌ Failed to create WebSocket:', error);
-    setConnectionStatus('error');
-  }
-};
+    }
+  };
 
-const testBackend = async () => {
-  const apiUrl = 'https://vyomgarud-dashboard-backend.onrender.com';
-  
-  try {
-    const response = await fetch(`${apiUrl}/api/health`);
-    const data = await response.json();
-    alert(`Backend Status: ${data.status}\n${data.message}`);
-  } catch (error) {
-    alert('❌ Backend is not running!');
-  }
-};
+  const disconnectWebSocket = () => {
+    if (ws.current) {
+      ws.current.close();
+      ws.current = null;
+    }
+    setConnectionStatus('disconnected');
+    console.log('🔌 Manual disconnect');
+  };
+
+  const toggleConnection = () => {
+    if (connectionStatus === 'connected') {
+      disconnectWebSocket();
+    } else {
+      connectWebSocket();
+    }
+  };
+
+  const testBackend = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/health');
+      const data = await response.json();
+      alert(`Backend Status: ${data.status}\n${data.message}`);
+    } catch (error) {
+      alert('❌ Backend is not running! Start the backend server first.');
+    }
+  };
 
   const getStatusColor = () => {
     switch (connectionStatus) {

@@ -5,25 +5,13 @@ const http = require('http');
 const dgram = require('dgram');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001; // Render provides PORT
 
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://vyomgarud-dashboard-frontend.onrender.com',
-    'http://localhost:3000',
-    'https://vyomgarud-dashboard.onrender.com'
-  ],
-  credentials: true
-}));
-
+app.use(cors());
 app.use(express.json());
 
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ 
-  server,
-  path: '/ws' // Add explicit WebSocket path
-});
+const wss = new WebSocket.Server({ server });
 
 const clients = new Set();
 let telemetryData = {
@@ -205,7 +193,7 @@ function broadcastToClients(type, data) {
 function startMAVLinkListener() {
     const udpSocket = dgram.createSocket('udp4');
     
-    udpSocket.bind(14550, '127.0.0.1', () => {
+    udpSocket.bind(14550, '0.0.0.0', () => {
         console.log('📡 MAVLink UDP listener started on 127.0.0.1:14550');
     });
 
@@ -234,84 +222,14 @@ wss.on('connection', (ws) => {
 });
 
 app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'OK', 
-        message: 'Backend Ready',
-        timestamp: new Date().toISOString(),
-        websocket: `ws://${req.get('host')}/ws`
-    });
+    res.json({ status: 'OK', message: 'Backend Ready' });
 });
-
 
 app.get('/api/telemetry', (req, res) => {
-    res.json({
-        ...mavlinkParser.telemetryData,
-        timestamp: new Date().toISOString()
-    });
-});
-// Mock data generator for production (since Python simulator can't run on Render)
-function startMockDataGenerator() {
-  if (process.env.NODE_ENV === 'production') {
-    console.log('🚀 Starting mock data generator for production...');
-    
-    setInterval(() => {
-      const mockData = {
-        heartbeat: {
-          flightMode: 'GUIDED',
-          customMode: 4,
-          timestamp: Date.now()
-        },
-        battery: {
-          voltage: 12.5 + Math.random() * 1.5,
-          current: 5 + Math.random() * 3,
-          remaining: 70 + Math.random() * 20,
-          timestamp: Date.now()
-        },
-        gps: {
-          lat: 47.3769 + (Math.random() - 0.5) * 0.01,
-          lon: 8.5417 + (Math.random() - 0.5) * 0.01,
-          alt: 50 + Math.random() * 50,
-          speed: 3 + Math.random() * 4,
-          satellites: 8 + Math.floor(Math.random() * 4),
-          timestamp: Date.now()
-        },
-        attitude: {
-          roll: (Math.random() - 0.5) * 10,
-          pitch: (Math.random() - 0.5) * 8,
-          yaw: Math.random() * 360,
-          timestamp: Date.now()
-        }
-      };
-      
-      // Update telemetry and broadcast
-      Object.assign(mavlinkParser.telemetryData, mockData);
-      broadcastToClients('HEARTBEAT', mockData.heartbeat);
-      broadcastToClients('BATTERY', mockData.battery);
-      broadcastToClients('GPS', mockData.gps);
-      broadcastToClients('ATTITUDE', mockData.attitude);
-      
-    }, 2000);
-  }
-}
-// Add root route to avoid "Cannot GET /" error
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'VYOMGARUD Backend API',
-    status: 'running',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-    endpoints: {
-      health: '/api/health',
-      telemetry: '/api/telemetry',
-      websocket: '/ws'
-    }
-  });
+    res.json(mavlinkParser.telemetryData);
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 VYOMGARUD Backend running on port ${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-   console.log(`📍 Health check: http://0.0.0.0:${PORT}/api/health`);
-  startMAVLinkListener();
-  startMockDataGenerator(); // Add this line
+server.listen(PORT, '0.0.0.0', () => { // Listen on 0.0.0.0
+    console.log(`🚀 Backend running on http://0.0.0.0:${PORT}`);
+    startMAVLinkListener();
 });
