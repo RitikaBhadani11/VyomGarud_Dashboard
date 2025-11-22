@@ -44,9 +44,7 @@ const connectWebSocket = () => {
   try {
     setConnectionStatus('connecting');
     
-    const wsUrl = import.meta.env.PROD 
-      ? import.meta.env.VITE_WS_URL 
-      : 'ws://localhost:3001';
+    const wsUrl = 'wss://vyomgarud-dashboard-backend.onrender.com';
     
     console.log('🔗 Connecting to:', wsUrl);
     ws.current = new WebSocket(wsUrl);
@@ -81,9 +79,7 @@ const connectWebSocket = () => {
   };
 
 const testBackend = async () => {
-  const apiUrl = import.meta.env.PROD 
-    ? import.meta.env.VITE_API_URL 
-    : 'http://localhost:3001';
+  const apiUrl = 'https://vyomgarud-dashboard-backend.onrender.com';
   
   try {
     const response = await fetch(`${apiUrl}/api/health`);

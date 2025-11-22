@@ -10,7 +10,7 @@ const PORT = 3001;
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://vyomgarud-frontend.onrender.com'
+    'https://vyomgarud-dashboard-frontend.onrender.com'
   ],
   credentials: true
 }));
@@ -279,6 +279,18 @@ function startMockDataGenerator() {
     }, 2000);
   }
 }
+// Add root route to avoid "Cannot GET /" error
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'VYOMGARUD Backend API',
+    status: 'running',
+    endpoints: {
+      health: '/api/health',
+      telemetry: '/api/telemetry',
+      websocket: 'ws://vyomgarud-dashboard-backend.onrender.com'
+    }
+  });
+});
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 VYOMGARUD Backend running on port ${PORT}`);
