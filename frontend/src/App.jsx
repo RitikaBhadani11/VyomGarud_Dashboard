@@ -43,80 +43,30 @@ function App() {
   }, []);
 
   const connectWebSocket = () => {
-    try {
-      setConnectionStatus('connecting');
-          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-        const wsUrl = backendUrl.replace('http', 'ws') + (backendUrl.includes('render.com') ? '' : ':3001');
-      ws.current = new WebSocket('wsUrl');
-      
-      
-      ws.current.onopen = () => {
-        setConnectionStatus('connected');
-        console.log('✅ WebSocket connected to backend');
-      };
-
-      ws.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('📨 Received:', data.type, data.data);
-          
-          if (data.type === 'INITIAL_DATA') {
-            setTelemetry(data.data);
-          } else {
-            setTelemetry(prev => ({
-              ...prev,
-              [data.type.toLowerCase()]: data.data
-            }));
-          }
-        } catch (error) {
-          console.error('❌ Error parsing message:', error);
-        }
-      };
-
-      ws.current.onclose = (event) => {
-        setConnectionStatus('disconnected');
-        console.log('❌ WebSocket disconnected', event.code, event.reason);
-        // No automatic reconnection - manual control only
-      };
-
-      ws.current.onerror = (error) => {
-        console.error('❌ WebSocket error:', error);
-        setConnectionStatus('error');
-      };
-    } catch (error) {
-      console.error('❌ Failed to create WebSocket:', error);
-      setConnectionStatus('error');
-    }
-  };
-
-  const disconnectWebSocket = () => {
-    if (ws.current) {
-      ws.current.close();
-      ws.current = null;
-    }
-    setConnectionStatus('disconnected');
-    console.log('🔌 Manual disconnect');
-  };
-
-  const toggleConnection = () => {
-    if (connectionStatus === 'connected') {
-      disconnectWebSocket();
+  try {
+    setConnectionStatus('connecting');
+    
+    // FIX: Use the correct WebSocket URL
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+    
+    // For production (Render), use wss:// protocol
+    let wsUrl;
+    if (backendUrl.includes('render.com')) {
+      wsUrl = backendUrl.replace('https', 'wss') + '/ws';
     } else {
-      connectWebSocket();
+      // For local development
+      wsUrl = backendUrl.replace('http', 'ws') + (backendUrl.includes('localhost') ? ':3001' : '');
     }
-  };
-
-const testBackend = async () => {
-    try {
-      // FIXED: Use environment variable for backend URL
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-      const response = await fetch(`${backendUrl}/api/health`);
-      const data = await response.json();
-      alert(`Backend Status: ${data.status}\n${data.message}`);
-    } catch (error) {
-      alert('❌ Backend is not running! Start the backend server first.');
-    }
-  };
+    
+    console.log('🔗 Connecting to WebSocket:', wsUrl);
+    ws.current = new WebSocket(wsUrl);
+    
+    // Rest of your connection code...
+  } catch (error) {
+    console.error('❌ Failed to create WebSocket:', error);
+    setConnectionStatus('error');
+  }
+};
 
   const getStatusColor = () => {
     switch (connectionStatus) {

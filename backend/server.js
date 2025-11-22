@@ -7,7 +7,13 @@ const dgram = require('dgram');
 const app = express();
 const PORT = process.env.PORT || 3001; // Render provides PORT
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://mavlink-frontend.onrender.com',
+    'http://localhost:3000'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 const server = http.createServer(app);
