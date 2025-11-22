@@ -42,31 +42,51 @@ function App() {
     };
   }, []);
 
-  const connectWebSocket = () => {
+ const connectWebSocket = () => {
   try {
     setConnectionStatus('connecting');
     
-    // FIX: Use the correct WebSocket URL
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-    
-    // For production (Render), use wss:// protocol
-    let wsUrl;
-    if (backendUrl.includes('render.com')) {
-      wsUrl = backendUrl.replace('https', 'wss') + '/ws';
-    } else {
-      // For local development
-      wsUrl = backendUrl.replace('http', 'ws') + (backendUrl.includes('localhost') ? ':3001' : '');
-    }
+    // Temporary hardcoded solution for testing
+    const wsUrl = 'wss://mavlink-backend.onrender.com';
     
     console.log('🔗 Connecting to WebSocket:', wsUrl);
     ws.current = new WebSocket(wsUrl);
     
-    // Rest of your connection code...
+    // Rest of your connection code remains the same...
   } catch (error) {
     console.error('❌ Failed to create WebSocket:', error);
     setConnectionStatus('error');
   }
 };
+
+  const disconnectWebSocket = () => {
+    if (ws.current) {
+      ws.current.close();
+      ws.current = null;
+    }
+    setConnectionStatus('disconnected');
+    console.log('🔌 Manual disconnect');
+  };
+
+  const toggleConnection = () => {
+    if (connectionStatus === 'connected') {
+      disconnectWebSocket();
+    } else {
+      connectWebSocket();
+    }
+  };
+
+const testBackend = async () => {
+    try {
+      // FIXED: Use environment variable for backend URL
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+      const response = await fetch(`${backendUrl}/api/health`);
+      const data = await response.json();
+      alert(`Backend Status: ${data.status}\n${data.message}`);
+    } catch (error) {
+      alert('❌ Backend is not running! Start the backend server first.');
+    }
+  };
 
   const getStatusColor = () => {
     switch (connectionStatus) {
