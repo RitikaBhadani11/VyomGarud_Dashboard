@@ -7,7 +7,14 @@ const dgram = require('dgram');
 const app = express();
 const PORT = 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://vyomgarud-frontend.onrender.com'
+  ],
+  credentials: true
+}));
+
 app.use(express.json());
 
 const server = http.createServer(app);
@@ -228,8 +235,54 @@ app.get('/api/health', (req, res) => {
 app.get('/api/telemetry', (req, res) => {
     res.json(mavlinkParser.telemetryData);
 });
+// Mock data generator for production (since Python simulator can't run on Render)
+function startMockDataGenerator() {
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🚀 Starting mock data generator for production...');
+    
+    setInterval(() => {
+      const mockData = {
+        heartbeat: {
+          flightMode: 'GUIDED',
+          customMode: 4,
+          timestamp: Date.now()
+        },
+        battery: {
+          voltage: 12.5 + Math.random() * 1.5,
+          current: 5 + Math.random() * 3,
+          remaining: 70 + Math.random() * 20,
+          timestamp: Date.now()
+        },
+        gps: {
+          lat: 47.3769 + (Math.random() - 0.5) * 0.01,
+          lon: 8.5417 + (Math.random() - 0.5) * 0.01,
+          alt: 50 + Math.random() * 50,
+          speed: 3 + Math.random() * 4,
+          satellites: 8 + Math.floor(Math.random() * 4),
+          timestamp: Date.now()
+        },
+        attitude: {
+          roll: (Math.random() - 0.5) * 10,
+          pitch: (Math.random() - 0.5) * 8,
+          yaw: Math.random() * 360,
+          timestamp: Date.now()
+        }
+      };
+      
+      // Update telemetry and broadcast
+      Object.assign(mavlinkParser.telemetryData, mockData);
+      broadcastToClients('HEARTBEAT', mockData.heartbeat);
+      broadcastToClients('BATTERY', mockData.battery);
+      broadcastToClients('GPS', mockData.gps);
+      broadcastToClients('ATTITUDE', mockData.attitude);
+      
+    }, 2000);
+  }
+}
 
-server.listen(PORT, () => {
-    console.log(`🚀 Backend running on http://localhost:${PORT}`);
-    startMAVLinkListener();
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 VYOMGARUD Backend running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  startMAVLinkListener();
+  startMockDataGenerator(); // Add this line
 });

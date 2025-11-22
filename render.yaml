@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: vyomgarud-backend
+    env: node
+    root: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /api/health
+    plan: free
+
+  - type: web
+    name: vyomgarud-frontend
+    env: static
+    root: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: vyomgarud-backend
+          type: web
+          property: url
+      - key: VITE_WS_URL
+        fromService:
+          name: vyomgarud-backend
+          type: web
+          property: url
+          transform: wss://${host}
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    plan: free

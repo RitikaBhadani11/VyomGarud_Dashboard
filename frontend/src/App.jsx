@@ -40,49 +40,28 @@ function App() {
     };
   }, []);
 
-  const connectWebSocket = () => {
-    try {
-      setConnectionStatus('connecting');
-      ws.current = new WebSocket('ws://localhost:3001');
-      
-      ws.current.onopen = () => {
-        setConnectionStatus('connected');
-        console.log('✅ WebSocket connected to backend');
-      };
+const connectWebSocket = () => {
+  try {
+    setConnectionStatus('connecting');
+    
+    const wsUrl = import.meta.env.PROD 
+      ? import.meta.env.VITE_WS_URL 
+      : 'ws://localhost:3001';
+    
+    console.log('🔗 Connecting to:', wsUrl);
+    ws.current = new WebSocket(wsUrl);
+    
+    ws.current.onopen = () => {
+      setConnectionStatus('connected');
+      console.log('✅ WebSocket connected to backend');
+    };
 
-      ws.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('📨 Received:', data.type, data.data);
-          
-          if (data.type === 'INITIAL_DATA') {
-            setTelemetry(data.data);
-          } else {
-            setTelemetry(prev => ({
-              ...prev,
-              [data.type.toLowerCase()]: data.data
-            }));
-          }
-        } catch (error) {
-          console.error('❌ Error parsing message:', error);
-        }
-      };
-
-      ws.current.onclose = (event) => {
-        setConnectionStatus('disconnected');
-        console.log('❌ WebSocket disconnected', event.code, event.reason);
-        // No automatic reconnection - manual control only
-      };
-
-      ws.current.onerror = (error) => {
-        console.error('❌ WebSocket error:', error);
-        setConnectionStatus('error');
-      };
-    } catch (error) {
-      console.error('❌ Failed to create WebSocket:', error);
-      setConnectionStatus('error');
-    }
-  };
+    // ... keep the rest of your WebSocket code the same ...
+  } catch (error) {
+    console.error('❌ Failed to create WebSocket:', error);
+    setConnectionStatus('error');
+  }
+};
 
   const disconnectWebSocket = () => {
     if (ws.current) {
@@ -101,15 +80,19 @@ function App() {
     }
   };
 
-  const testBackend = async () => {
-    try {
-      const response = await fetch('http://localhost:3001/api/health');
-      const data = await response.json();
-      alert(`Backend Status: ${data.status}\n${data.message}`);
-    } catch (error) {
-      alert('❌ Backend is not running! Start the backend server first.');
-    }
-  };
+const testBackend = async () => {
+  const apiUrl = import.meta.env.PROD 
+    ? import.meta.env.VITE_API_URL 
+    : 'http://localhost:3001';
+  
+  try {
+    const response = await fetch(`${apiUrl}/api/health`);
+    const data = await response.json();
+    alert(`Backend Status: ${data.status}\n${data.message}`);
+  } catch (error) {
+    alert('❌ Backend is not running!');
+  }
+};
 
   const getStatusColor = () => {
     switch (connectionStatus) {
